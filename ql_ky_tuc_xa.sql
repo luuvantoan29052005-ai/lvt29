@@ -1,80 +1,89 @@
--- 1. Tạo Database
+-- DATABASE QUAN LY KY TUC XA - DUNG CHINH XAC 6 BANG
+-- CANH BAO: Script se xoa 5 bang cu quan_ly_* va du lieu trong cac bang do.
+-- Cac bang KHU/PHONG/SINHVIEN/DANGKY/HOADON/THANHTOAN da ton tai se duoc giu nguyen.
 CREATE DATABASE IF NOT EXISTS ql_ky_tuc_xa
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE ql_ky_tuc_xa;
 
--- 2. Bảng quản lý hệ thống
-CREATE TABLE quan_ly_he_thong (
-    ma_he_thong INT PRIMARY KEY AUTO_INCREMENT,
-    ten_tai_khoan VARCHAR(50) NOT NULL,
-    mat_khau VARCHAR(255) NOT NULL,
-    vai_tro VARCHAR(50)
-);
+-- Xoa cac bang cu cua phien ban truoc de database con dung 6 bang moi.
+-- CANH BAO: cac bang cu va du lieu ben trong se bi xoa.
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `quan_ly_tai_chinh`;
+DROP TABLE IF EXISTS `thong_ke_bao_cao`;
+DROP TABLE IF EXISTS `quan_ly_sinh_vien`;
+DROP TABLE IF EXISTS `quan_ly_phong`;
+DROP TABLE IF EXISTS `quan_ly_he_thong`;
+SET FOREIGN_KEY_CHECKS = 1;
 
--- 3. Bảng quản lý sinh viên và lưu trú
-CREATE TABLE quan_ly_sinh_vien (
-    ma_sinh_vien VARCHAR(20) PRIMARY KEY,
-    ho_ten VARCHAR(100) NOT NULL,
-    ngay_sinh DATE,
-    gioi_tinh VARCHAR(10),
-    ma_phong VARCHAR(20),
-    trang_thai_luu_tru VARCHAR(50)
-);
+CREATE TABLE IF NOT EXISTS `KHU` (
+  `MaKhu` VARCHAR(20) PRIMARY KEY,
+  `TenKhu` VARCHAR(100) NOT NULL,
+  `DiaChi` VARCHAR(255) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Bảng quản lý phòng và cơ sở vật chất
-CREATE TABLE quan_ly_phong (
-    ma_phong VARCHAR(20) PRIMARY KEY,
-    ten_phong VARCHAR(50),
-    suc_chua INT,
-    so_nguoi_hien_tai INT,
-    tinh_trang_phong VARCHAR(50)
-);
+CREATE TABLE IF NOT EXISTS `PHONG` (
+  `MaPhong` VARCHAR(20) PRIMARY KEY,
+  `TenPhong` VARCHAR(100) NOT NULL,
+  `SucChua` INT NOT NULL DEFAULT 0,
+  `TrangThai` VARCHAR(50) NOT NULL DEFAULT 'Con cho',
+  `MaKhu` VARCHAR(20) NOT NULL,
+  CONSTRAINT `fk_phong_khu` FOREIGN KEY (`MaKhu`) REFERENCES `KHU` (`MaKhu`)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. Bảng quản lý tài chính và dịch vụ
-CREATE TABLE quan_ly_tai_chinh (
-    ma_hoa_don INT PRIMARY KEY AUTO_INCREMENT,
-    ma_sinh_vien VARCHAR(20),
-    tien_phong DECIMAL(12,2),
-    tien_dien DECIMAL(12,2),
-    tien_nuoc DECIMAL(12,2),
-    tong_tien DECIMAL(12,2),
-    trang_thai_thanh_toan VARCHAR(50)
-);
+CREATE TABLE IF NOT EXISTS `SINHVIEN` (
+  `MaSV` VARCHAR(20) PRIMARY KEY,
+  `HoTen` VARCHAR(100) NOT NULL,
+  `NgaySinh` DATE NULL,
+  `GioiTinh` VARCHAR(20) NULL,
+  `Lop` VARCHAR(50) NULL,
+  `Khoa` VARCHAR(100) NULL,
+  `SDT` VARCHAR(20) NULL,
+  `DiaChi` VARCHAR(255) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. Bảng thống kê và báo cáo
-CREATE TABLE thong_ke_bao_cao (
-    ma_bao_cao INT PRIMARY KEY AUTO_INCREMENT,
-    ten_bao_cao VARCHAR(100),
-    ngay_lap DATE,
-    noi_dung TEXT,
-    nguoi_lap VARCHAR(100)
-);
-USE ql_ky_tuc_xa;
+CREATE TABLE IF NOT EXISTS `DANGKY` (
+  `MaDK` INT AUTO_INCREMENT PRIMARY KEY,
+  `NgayDK` DATE NOT NULL,
+  `NgayNhanPhong` DATE NULL,
+  `NgayTraPhong` DATE NULL,
+  `TrangThai` VARCHAR(50) NOT NULL DEFAULT 'Dang o',
+  `MaSV` VARCHAR(20) NOT NULL,
+  `MaPhong` VARCHAR(20) NOT NULL,
+  CONSTRAINT `fk_dangky_sinhvien` FOREIGN KEY (`MaSV`) REFERENCES `SINHVIEN` (`MaSV`)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT `fk_dangky_phong` FOREIGN KEY (`MaPhong`) REFERENCES `PHONG` (`MaPhong`)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX `idx_dangky_phong_trangthai` (`MaPhong`, `TrangThai`),
+  INDEX `idx_dangky_sinhvien` (`MaSV`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. Sinh viên thuộc một phòng
-ALTER TABLE quan_ly_sinh_vien
-ADD CONSTRAINT fk_sv_phong
-FOREIGN KEY (ma_phong)
-REFERENCES quan_ly_phong(ma_phong);
+CREATE TABLE IF NOT EXISTS `HOADON` (
+  `MaHD` INT AUTO_INCREMENT PRIMARY KEY,
+  `Thang` TINYINT NOT NULL,
+  `Nam` SMALLINT NOT NULL,
+  `TienPhong` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `TienDien` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `TienNuoc` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `TongTien` DECIMAL(12,2) NOT NULL DEFAULT 0,
+  `MaSV` VARCHAR(20) NOT NULL,
+  CONSTRAINT `fk_hoadon_sinhvien` FOREIGN KEY (`MaSV`) REFERENCES `SINHVIEN` (`MaSV`)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX `idx_hoadon_sinhvien` (`MaSV`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Hóa đơn thuộc một sinh viên
-ALTER TABLE quan_ly_tai_chinh
-ADD CONSTRAINT fk_tc_sv
-FOREIGN KEY (ma_sinh_vien)
-REFERENCES quan_ly_sinh_vien(ma_sinh_vien);
+CREATE TABLE IF NOT EXISTS `THANHTOAN` (
+  `MaTT` INT AUTO_INCREMENT PRIMARY KEY,
+  `NgayTT` DATE NOT NULL,
+  `SoTien` DECIMAL(12,2) NOT NULL,
+  `PhuongThuc` VARCHAR(50) NULL,
+  `MaHD` INT NOT NULL,
+  CONSTRAINT `fk_thanhtoan_hoadon` FOREIGN KEY (`MaHD`) REFERENCES `HOADON` (`MaHD`)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  INDEX `idx_thanhtoan_hoadon` (`MaHD`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 9. Tài khoản quản lý tạo hóa đơn
-ALTER TABLE quan_ly_tai_chinh
-ADD ma_nguoi_tao INT,
-ADD CONSTRAINT fk_tc_ht
-FOREIGN KEY (ma_nguoi_tao)
-REFERENCES quan_ly_he_thong(ma_he_thong);
+-- Tao khu mau de co the them phong ngay. Co the sua ten/dia chi sau.
+INSERT IGNORE INTO `KHU` (`MaKhu`, `TenKhu`, `DiaChi`) VALUES ('KHU01', 'Khu A', NULL);
 
--- 10. Tài khoản quản lý lập báo cáo
-ALTER TABLE thong_ke_bao_cao
-ADD ma_nguoi_lap INT,
-ADD CONSTRAINT fk_bc_ht
-FOREIGN KEY (ma_nguoi_lap)
-REFERENCES quan_ly_he_thong(ma_he_thong);
+SHOW TABLES;

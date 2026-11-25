@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý ký túc xá</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ĐĂNG NHẬP -->
+<div id="login-screen" class="login-screen">
+    <div class="login-box">
+        <div class="logo">K</div>
+        <h1>Quản lý ký túc xá</h1>
+        <p>Đăng nhập hệ thống quản lý</p>
+
+        <form id="login-form">
+            <label>Tên tài khoản</label>
+            <input type="text" id="username" required placeholder="Nhập tài khoản">
+
+            <label>Mật khẩu</label>
+            <input type="password" id="password" required placeholder="Nhập mật khẩu">
+
+            <p id="login-error" class="error"></p>
+
+            <button type="submit">Đăng nhập</button>
+        </form>
+    </div>
+</div>
+
+<!-- GIAO DIỆN CHÍNH -->
+<div id="app" class="app hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo">K</div>
+            <div>
+                <h2>DormManage</h2>
+                <small>QUẢN LÝ KÝ TÚC XÁ</small>
+            </div>
+        </div>
+
+        <p class="menu-title">MENU CHÍNH</p>
+
+        <nav>
+            <button class="nav-link active" data-page="overview">▦ Tổng quan</button>
+            <button class="nav-link" data-page="students">♙ Sinh viên</button>
+            <button class="nav-link" data-page="rooms">▤ Quản lý phòng</button>
+            <button class="nav-link" data-page="finance">₫ Tài chính</button>
+            <button class="nav-link" data-page="reports">▥ Báo cáo</button>
+        </nav>
+
+        <button id="logout-btn" class="logout">↪ Đăng xuất</button>
+    </aside>
+
+    <!-- NỘI DUNG -->
+    <main class="main">
+
+        <header class="topbar">
+            <div>
+                <small>HỆ THỐNG QUẢN LÝ</small>
+                <h2 id="page-title">Tổng quan</h2>
+            </div>
+
+            <div class="user">
+                <div class="avatar" id="avatar">A</div>
+                <div>
+                    <strong id="user-name">Admin</strong>
+                    <small id="user-role">Quản trị viên</small>
+                </div>
+            </div>
+        </header>
+
+        <!-- TỔNG QUAN -->
+        <section id="page-overview" class="page active">
+            <h2>Xin chào, <span id="welcome-name">Admin</span>!</h2>
+            <p class="description">Tổng quan hoạt động ký túc xá.</p>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <span>Tổng sinh viên</span>
+                    <h1 id="stat-students">0</h1>
+                </div>
+
+                <div class="stat-card">
+                    <span>Tổng số phòng</span>
+                    <h1 id="stat-rooms">0</h1>
+                </div>
+
+                <div class="stat-card">
+                    <span>Chỗ còn trống</span>
+                    <h1 id="stat-empty">0</h1>
+                </div>
+
+                <div class="stat-card">
+                    <span>Hóa đơn chưa thanh toán</span>
+                    <h1 id="stat-unpaid">0 đ</h1>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Tình trạng phòng</h3>
+                <div id="room-summary"></div>
+            </div>
+        </section>
+
+        <!-- SINH VIÊN -->
+        <section id="page-students" class="page">
+            <div class="section-heading">
+                <div>
+                    <h2>Quản lý sinh viên</h2>
+                    <p class="description">Danh sách sinh viên ký túc xá</p>
+                </div>
+                <button class="primary admin-only" id="add-student">+ Thêm sinh viên</button>
+            </div>
+
+            <div class="panel">
+                <input id="student-search" class="search" placeholder="Tìm sinh viên...">
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mã sinh viên</th>
+                                <th>Họ tên</th>
+                                <th>Ngày sinh</th>
+                                <th>Giới tính</th>
+                                <th>Mã phòng</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHÒNG -->
+        <section id="page-rooms" class="page">
+            <div class="section-heading">
+                <div>
+                    <h2>Quản lý phòng</h2>
+                    <p class="description">Danh sách và tình trạng phòng</p>
+                </div>
+                <button class="primary admin-only" id="add-room">+ Thêm phòng</button>
+            </div>
+
+            <div class="panel">
+                <input id="room-search" class="search" placeholder="Tìm phòng...">
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mã phòng</th>
+                                <th>Tên phòng</th>
+                                <th>Sức chứa</th>
+                                <th>Đang ở</th>
+                                <th>Còn trống</th>
+                                <th>Tình trạng</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rooms-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TÀI CHÍNH -->
+        <section id="page-finance" class="page">
+            <div class="section-heading">
+                <div>
+                    <h2>Quản lý tài chính</h2>
+                    <p class="description">Quản lý hóa đơn và thanh toán</p>
+                </div>
+                <button class="primary admin-only" id="add-invoice">+ Tạo hóa đơn</button>
+            </div>
+
+            <div class="stats three">
+                <div class="stat-card">
+                    <span>Tổng hóa đơn</span>
+                    <h1 id="invoice-count">0</h1>
+                </div>
+                <div class="stat-card">
+                    <span>Đã thanh toán</span>
+                    <h1 id="paid-count">0</h1>
+                </div>
+                <div class="stat-card">
+                    <span>Chưa thanh toán</span>
+                    <h1 id="unpaid-count">0</h1>
+                </div>
+            </div>
+
+            <div class="panel">
+                <input id="finance-search" class="search" placeholder="Tìm hóa đơn...">
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mã hóa đơn</th>
+                                <th>Mã sinh viên</th>
+                                <th>Tiền phòng</th>
+                                <th>Tiền điện</th>
+                                <th>Tiền nước</th>
+                                <th>Tổng tiền</th>
+                                <th>Thanh toán</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="finance-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- BÁO CÁO -->
+        <section id="page-reports" class="page">
+            <h2>Báo cáo hệ thống</h2>
+            <p class="description">Danh sách báo cáo</p>
+
+            <div class="panel table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Mã báo cáo</th>
+                            <th>Tên báo cáo</th>
+                            <th>Ngày lập</th>
+                            <th>Nội dung</th>
+                            <th>Người lập</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- HỘP THÊM / SỬA -->
+<div id="modal" class="modal hidden">
+    <div class="modal-box">
+        <button id="close-modal" class="close">×</button>
+        <h2 id="modal-title">Thêm dữ liệu</h2>
+
+        <form id="data-form">
+            <div id="form-fields"></div>
+            <button type="submit" class="primary">Lưu dữ liệu</button>
+        </form>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
