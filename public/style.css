@@ -336,6 +336,7 @@ td {
 /* MODAL */
 .modal {
     position: fixed;
+    z-index: 99999; /* Luon hien hop them/sua len tren giao dien */
     inset: 0;
     background: #17243c88;
     display: flex;
@@ -412,4 +413,35 @@ td {
     .stats.three {
         grid-template-columns: 1fr;
     }
+}
+
+
+/* CẢI TIẾN FORM THÊM / SỬA */
+.form-help {
+    color: #7d899d;
+    font-size: 12px;
+    line-height: 1.5;
+    margin: -2px 0 12px;
+}
+.invoice-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 14px;
+    margin: 8px 0 12px;
+    border-radius: 8px;
+    background: #edf2ff;
+    color: #26334d;
+    font-size: 14px;
+}
+.invoice-total strong {
+    color: #2857d5;
+    font-size: 16px;
+}
+.modal-box label {
+    margin-top: 12px;
+}
+.modal-box input,
+.modal-box select {
+    font-size: 14px;
 }

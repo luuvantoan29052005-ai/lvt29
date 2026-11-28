@@ -509,11 +509,13 @@ function openModal(title, html, type, id = null) {
     $('form-fields').innerHTML = html;
 
     $('modal').classList.remove('hidden');
+    $('modal').style.display = 'flex';
 }
 
 
 function closeModal() {
     $('modal').classList.add('hidden');
+    $('modal').style.display = 'none';
     $('data-form').reset();
 
     currentType = '';
@@ -525,15 +527,53 @@ $('close-modal').addEventListener('click', closeModal);
 
 
 function inputField(name, label, value = '', type = 'text', required = true) {
+    const numeric = type === 'number'
+        ? 'min="0" step="1" inputmode="numeric"'
+        : '';
     return `
         <label>${label}</label>
         <input
             name="${name}"
             type="${type}"
             value="${escapeHTML(value)}"
+            ${numeric}
             ${required ? 'required' : ''}
         >
     `;
+}
+
+function selectField(name, label, options, currentValue = '', required = true) {
+    return `
+        <label>${label}</label>
+        <select name="${name}" ${required ? 'required' : ''}>
+            ${options.map(option => `
+                <option value="${escapeHTML(option.value)}"
+                    ${selected(option.value, currentValue)}>
+                    ${escapeHTML(option.label)}
+                </option>
+            `).join('')}
+        </select>
+    `;
+}
+
+function roomOptions(currentValue = '') {
+    return [
+        { value: '', label: '— Chưa xếp phòng —' },
+        ...rooms.map(room => ({
+            value: room.ma_phong,
+            label: `${room.ma_phong} - ${room.ten_phong} (${room.so_nguoi_hien_tai || 0}/${room.suc_chua || 0})`
+        }))
+    ];
+}
+
+function studentOptions(currentValue = '') {
+    return [
+        { value: '', label: '— Chọn sinh viên —' },
+        ...students.map(student => ({
+            value: student.ma_sinh_vien,
+            label: `${student.ma_sinh_vien} - ${student.ho_ten}`
+        }))
+    ];
 }
 
 
@@ -541,31 +581,34 @@ function inputField(name, label, value = '', type = 'text', required = true) {
 // 15. THÊM SINH VIÊN
 // =============================================
 
-$('add-student').addEventListener('click', function() {
-    openModal('Thêm sinh viên', `
-        ${inputField('ma_sinh_vien', 'Mã sinh viên')}
-        ${inputField('ho_ten', 'Họ tên')}
-        ${inputField('ngay_sinh', 'Ngày sinh', '', 'date')}
+$('add-student').addEventListener('click', async function() {
+    try {
+        await loadRooms();
+        openModal('Thêm sinh viên', `
+            ${inputField('ma_sinh_vien', 'Mã sinh viên')}
+            ${inputField('ho_ten', 'Họ tên')}
+            ${inputField('ngay_sinh', 'Ngày sinh', '', 'date')}
 
-        <label>Giới tính</label>
-        <select name="gioi_tinh" required>
-            <option value="Nam">Nam</option>
-            <option value="Nữ">Nữ</option>
-            <option value="Khác">Khác</option>
-        </select>
+            ${selectField('gioi_tinh', 'Giới tính', [
+                { value: 'Nam', label: 'Nam' },
+                { value: 'Nữ', label: 'Nữ' },
+                { value: 'Khác', label: 'Khác' }
+            ], 'Nam')}
 
-        ${inputField('lop', 'Lớp', '', 'text', false)}
-        ${inputField('khoa', 'Khoa', '', 'text', false)}
-        ${inputField('sdt', 'Số điện thoại', '', 'tel', false)}
-        ${inputField('dia_chi', 'Địa chỉ', '', 'text', false)}
-        ${inputField('ma_phong', 'Mã phòng đăng ký', '', 'text', false)}
-
-        <label>Trạng thái</label>
-        <select name="trang_thai_luu_tru">
-            <option value="Dang o">Đang ở</option>
-            <option value="Da roi">Đã rời</option>
-        </select>
-    `, 'student');
+            ${inputField('lop', 'Lớp', '', 'text', false)}
+            ${inputField('khoa', 'Khoa', '', 'text', false)}
+            ${inputField('sdt', 'Số điện thoại', '', 'tel', false)}
+            ${inputField('dia_chi', 'Địa chỉ', '', 'text', false)}
+            ${selectField('ma_phong', 'Phòng đăng ký', roomOptions(), '', false)}
+            <p class="form-help">Chỉ chọn phòng còn chỗ. Có thể để trống nếu chưa xếp phòng.</p>
+            ${selectField('trang_thai_luu_tru', 'Trạng thái', [
+                { value: 'Dang o', label: 'Đang ở' },
+                { value: 'Da roi', label: 'Đã rời' }
+            ], 'Dang o')}
+        `, 'student');
+    } catch (err) {
+        alert('Không tải được danh sách phòng: ' + err.message);
+    }
 });
 
 
@@ -573,21 +616,31 @@ $('add-student').addEventListener('click', function() {
 // 16. THÊM PHÒNG
 // =============================================
 
-$('add-room').addEventListener('click', function() {
-    openModal('Thêm phòng', `
-        ${inputField('ma_phong', 'Mã phòng')}
-        ${inputField('ten_phong', 'Tên phòng')}
-        ${inputField('suc_chua', 'Sức chứa', '4', 'number')}
-        ${inputField('ma_khu', 'Mã khu (mặc định KHU01)', 'KHU01')}
-        <label>Lưu ý: Mã khu phải tồn tại trong bảng KHU.</label>
+$('add-room').addEventListener('click', async function() {
+    try {
+        const khuList = await api('/khu');
+        if (!khuList.length) {
+            alert('Chưa có khu nào trong bảng KHU. Hãy thêm khu trước khi tạo phòng.');
+            return;
+        }
 
-        <label>Tình trạng</label>
-        <select name="tinh_trang_phong">
-            <option value="Con cho">Còn chỗ</option>
-            <option value="Trong">Trống</option>
-            <option value="Day">Đầy</option>
-        </select>
-    `, 'room');
+        openModal('Thêm phòng', `
+            ${inputField('ma_phong', 'Mã phòng')}
+            ${inputField('ten_phong', 'Tên phòng')}
+            ${inputField('suc_chua', 'Sức chứa', '4', 'number')}
+            ${selectField('ma_khu', 'Khu', khuList.map(k => ({
+                value: k.ma_khu,
+                label: `${k.ma_khu} - ${k.ten_khu || ''}`
+            })), khuList[0].ma_khu)}
+            ${selectField('tinh_trang_phong', 'Tình trạng', [
+                { value: 'Con cho', label: 'Còn chỗ' },
+                { value: 'Trong', label: 'Trống' },
+                { value: 'Day', label: 'Đầy' }
+            ], 'Con cho')}
+        `, 'room');
+    } catch (err) {
+        alert('Không tải được danh sách khu: ' + err.message);
+    }
 });
 
 
@@ -595,21 +648,47 @@ $('add-room').addEventListener('click', function() {
 // 17. THÊM HÓA ĐƠN
 // =============================================
 
-$('add-invoice').addEventListener('click', function() {
-    openModal('Tạo hóa đơn', `
-        ${inputField('ma_sinh_vien', 'Mã sinh viên')}
-        ${inputField('tien_phong', 'Tiền phòng', '0', 'number')}
-        ${inputField('tien_dien', 'Tiền điện', '0', 'number')}
-        ${inputField('tien_nuoc', 'Tiền nước', '0', 'number')}
+$('add-invoice').addEventListener('click', async function() {
+    try {
+        await loadStudents();
+        if (!students.length) {
+            alert('Chưa có sinh viên. Hãy thêm sinh viên trước khi tạo hóa đơn.');
+            return;
+        }
 
-        <label>Trạng thái thanh toán</label>
-        <select name="trang_thai_thanh_toan">
-            <option value="Chua thanh toan">Chưa thanh toán</option>
-            <option value="Da thanh toan">Đã thanh toán</option>
-        </select>
-    `, 'invoice');
+        openModal('Tạo hóa đơn', `
+            ${selectField('ma_sinh_vien', 'Sinh viên', studentOptions(), '', true)}
+            ${inputField('tien_phong', 'Tiền phòng (VNĐ)', '0', 'number')}
+            ${inputField('tien_dien', 'Tiền điện (VNĐ)', '0', 'number')}
+            ${inputField('tien_nuoc', 'Tiền nước (VNĐ)', '0', 'number')}
+            <div class="invoice-total">
+                Tổng tiền dự kiến: <strong id="invoice-total-preview">0 đ</strong>
+            </div>
+            ${selectField('trang_thai_thanh_toan', 'Trạng thái thanh toán', [
+                { value: 'Chua thanh toan', label: 'Chưa thanh toán' },
+                { value: 'Da thanh toan', label: 'Đã thanh toán đủ' }
+            ], 'Chua thanh toan')}
+        `, 'invoice');
+
+        const updateTotal = () => {
+            const form = $('data-form');
+            const total = ['tien_phong', 'tien_dien', 'tien_nuoc']
+                .reduce((sum, name) => sum + Number(form.elements[name]?.value || 0), 0);
+            const preview = $('invoice-total-preview');
+            if (preview) preview.textContent = money(total);
+        };
+        ['tien_phong', 'tien_dien', 'tien_nuoc'].forEach(name => {
+            $('data-form').elements[name].addEventListener('input', updateTotal);
+        });
+        updateTotal();
+    } catch (err) {
+        alert('Không tải được danh sách sinh viên: ' + err.message);
+    }
 });
 
+
+// =============================================
+// 18. SỬA DỮ LIỆU
 
 // =============================================
 // 18. SỬA DỮ LIỆU
@@ -637,25 +716,20 @@ function editData(type, id) {
                 String(record.ngay_sinh || '').slice(0, 10),
                 'date'
             )}
-
-            <label>Giới tính</label>
-            <select name="gioi_tinh">
-                <option value="Nam" ${selected('Nam', record.gioi_tinh)}>Nam</option>
-                <option value="Nữ" ${selected('Nữ', record.gioi_tinh)}>Nữ</option>
-                <option value="Khác" ${selected('Khác', record.gioi_tinh)}>Khác</option>
-            </select>
-
+            ${selectField('gioi_tinh', 'Giới tính', [
+                { value: 'Nam', label: 'Nam' },
+                { value: 'Nữ', label: 'Nữ' },
+                { value: 'Khác', label: 'Khác' }
+            ], record.gioi_tinh)}
             ${inputField('lop', 'Lớp', record.lop || '', 'text', false)}
             ${inputField('khoa', 'Khoa', record.khoa || '', 'text', false)}
             ${inputField('sdt', 'Số điện thoại', record.sdt || '', 'tel', false)}
             ${inputField('dia_chi', 'Địa chỉ', record.dia_chi || '', 'text', false)}
-            ${inputField('ma_phong', 'Mã phòng đăng ký', record.ma_phong || '', 'text', false)}
-
-            <label>Trạng thái</label>
-            <select name="trang_thai_luu_tru">
-                <option value="Dang o" ${selected('Dang o', record.trang_thai_luu_tru)}>Đang ở</option>
-                <option value="Da roi" ${selected('Da roi', record.trang_thai_luu_tru)}>Đã rời</option>
-            </select>
+            ${selectField('ma_phong', 'Phòng đăng ký', roomOptions(record.ma_phong || ''), record.ma_phong || '', false)}
+            ${selectField('trang_thai_luu_tru', 'Trạng thái', [
+                { value: 'Dang o', label: 'Đang ở' },
+                { value: 'Da roi', label: 'Đã rời' }
+            ], record.trang_thai_luu_tru || 'Da roi')}
         `;
     }
 
@@ -690,7 +764,7 @@ function editData(type, id) {
         if (!record) return;
 
         html = `
-            ${inputField('ma_sinh_vien', 'Mã sinh viên', record.ma_sinh_vien)}
+            ${selectField('ma_sinh_vien', 'Sinh viên', studentOptions(record.ma_sinh_vien), record.ma_sinh_vien)}
             ${inputField('tien_phong', 'Tiền phòng', record.tien_phong, 'number')}
             ${inputField('tien_dien', 'Tiền điện', record.tien_dien, 'number')}
             ${inputField('tien_nuoc', 'Tiền nước', record.tien_nuoc, 'number')}
@@ -716,6 +790,8 @@ function editData(type, id) {
 $('data-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    const savedType = currentType;
+    const savedId = currentId;
     const data = getFormData(e.target);
 
     const config = {
@@ -724,46 +800,36 @@ $('data-form').addEventListener('submit', async function(e) {
         invoice: '/tai-chinh'
     };
 
-    const basePath = config[currentType];
-
+    const basePath = config[savedType];
     if (!basePath) {
         alert('Không xác định được loại dữ liệu!');
         return;
     }
 
     const url = basePath +
-        (currentId !== null
-            ? '/' + encodeURIComponent(currentId)
-            : '');
-
-    const method = currentId !== null ? 'PUT' : 'POST';
+        (savedId !== null ? '/' + encodeURIComponent(savedId) : '');
+    const method = savedId !== null ? 'PUT' : 'POST';
 
     try {
         await api(url, method, data);
-
-        alert('Lưu dữ liệu thành công!');
+        alert(savedId !== null ? 'Cập nhật dữ liệu thành công!' : 'Thêm dữ liệu thành công!');
 
         closeModal();
 
-        if (currentType === 'student') {
-            await loadStudents();
-        }
-
-        if (currentType === 'room') {
+        // Dùng savedType vì closeModal() đã reset currentType.
+        if (savedType === 'student') {
+            await Promise.all([loadStudents(), loadRooms()]);
+        } else if (savedType === 'room') {
             await loadRooms();
-        }
-
-        if (currentType === 'invoice') {
+        } else if (savedType === 'invoice') {
             await loadFinance();
         }
 
         updateOverview();
-
     } catch (err) {
-        alert('Lỗi: ' + err.message);
+        alert('Không thể lưu dữ liệu: ' + err.message);
     }
 });
-
 
 // =============================================
 // 20. XÓA DỮ LIỆU
