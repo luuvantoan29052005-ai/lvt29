@@ -302,12 +302,84 @@ app.put('/sinh-vien/:id', async (req, res) => {
     } catch (e) { sendError(res, e); }
 });
 
+
 app.delete('/sinh-vien/:id', async (req, res) => {
+    const maSV = req.params.id;
+
     try {
-        await query('DELETE FROM DANGKY WHERE MaSV=?', [req.params.id]);
-        await query('DELETE FROM SINHVIEN WHERE MaSV=?', [req.params.id]);
-        res.json({ thong_bao: 'Xóa sinh viên thành công!' });
-    } catch (e) { sendError(res, e); }
+        // Bắt đầu giao dịch để đảm bảo xóa đồng bộ
+        await new Promise((resolve, reject) => {
+            db.beginTransaction(err => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        try {
+            // Kiểm tra sinh viên có tồn tại không
+            const sinhVien = await query(
+                'SELECT MaSV FROM SINHVIEN WHERE MaSV=? FOR UPDATE',
+                [maSV]
+            );
+
+            if (sinhVien.length === 0) {
+                await new Promise(resolve => db.rollback(() => resolve()));
+
+                return res.status(404).json({
+                    loi: 'Không tìm thấy sinh viên cần xóa.'
+                });
+            }
+
+            // Bước 1: Xóa các khoản thanh toán
+            // thuộc hóa đơn của sinh viên
+            await query(
+                `DELETE FROM THANHTOAN
+                 WHERE MaHD IN (
+                     SELECT MaHD FROM HOADON WHERE MaSV=?
+                 )`,
+                [maSV]
+            );
+
+            // Bước 2: Xóa hóa đơn của sinh viên
+            await query(
+                'DELETE FROM HOADON WHERE MaSV=?',
+                [maSV]
+            );
+
+            // Bước 3: Xóa lịch sử đăng ký phòng
+            await query(
+                'DELETE FROM DANGKY WHERE MaSV=?',
+                [maSV]
+            );
+
+            // Bước 4: Xóa thông tin sinh viên
+            await query(
+                'DELETE FROM SINHVIEN WHERE MaSV=?',
+                [maSV]
+            );
+
+            // Hoàn tất giao dịch
+            await new Promise((resolve, reject) => {
+                db.commit(err => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+
+            res.json({
+                thong_bao:
+                    'Đã xóa sinh viên và toàn bộ dữ liệu liên quan thành công!'
+            });
+
+        } catch (err) {
+            // Có lỗi thì hoàn tác toàn bộ thao tác
+            await new Promise(resolve => db.rollback(() => resolve()));
+            throw err;
+        }
+
+    } catch (e) {
+        sendError(res, e);
+    }
 });
 
 // ==================== PHÒNG ====================
